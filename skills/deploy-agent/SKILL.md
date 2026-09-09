@@ -1,7 +1,7 @@
 ---
 name: deploy-agent
 description: "Deploy a new AI agent on AgentsPodium and pay for it in crypto, over HTTP, without a browser. Use when you need to give a task its own always-on agent, or when you are asked to 'spin up another agent' and want the whole cycle — create, pay, get its address — done from code."
-version: 1.0.1
+version: 1.0.2
 license: MIT
 metadata:
   tags: [deployment, provisioning, a2a, crypto-payment, usdt, usdc, multi-agent]
@@ -88,6 +88,13 @@ one. Point its A record at `138.199.136.33` first;
 `GET /api/domains/check?domain=<name>&https=1` tells you whether DNS points
 here and whether HTTPS on it already answers. The certificate is issued
 automatically once the record resolves.
+
+`webhookUrl`, if you set it, is where the platform POSTs signed events
+about the pod (`agent.running`, `agent.stopped`, `agent.failed`,
+`agent.deleted`, `payment.confirmed`, `deletion.warning`), so you never have
+to poll. The reply then carries `webhookSecret` beside `agent` — shown once;
+verify `X-AgentsPodium-Signature` (`sha256=` + hex HMAC-SHA256 of the raw
+body) with it. Details: https://hosting.defispace.com/docs/webhooks.md
 
 The reply is `{"agent":{…}}`. Keep `agent.id` — every call below needs it. The
 pod takes a few minutes to come up; poll `GET /agents/:id` and watch `status`.
