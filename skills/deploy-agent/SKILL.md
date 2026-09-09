@@ -1,7 +1,7 @@
 ---
 name: deploy-agent
 description: "Deploy a new AI agent on AgentsPodium and pay for it in crypto, over HTTP, without a browser. Use when you need to give a task its own always-on agent, or when you are asked to 'spin up another agent' and want the whole cycle — create, pay, get its address — done from code."
-version: 1.0.0
+version: 1.0.1
 license: MIT
 metadata:
   tags: [deployment, provisioning, a2a, crypto-payment, usdt, usdc, multi-agent]
@@ -82,8 +82,12 @@ build), `extraSoul` / `soul` (extra instructions), `model`, `tools`
 (`{"enabled":[…],"mcpServers":[…]}`), `domain`, `channels` — any of `web`,
 `telegram`, `discord`, `whatsapp`, `email`.
 
-`domain`, if you set it, must be a subdomain of `agentspodium.com`; anything
-else is rejected by pattern.
+`domain`, if you set it, is your own domain (for example `bot.example.com`);
+names under `agentspodium.com` are refused because every pod already gets
+one. Point its A record at `138.199.136.33` first;
+`GET /api/domains/check?domain=<name>&https=1` tells you whether DNS points
+here and whether HTTPS on it already answers. The certificate is issued
+automatically once the record resolves.
 
 The reply is `{"agent":{…}}`. Keep `agent.id` — every call below needs it. The
 pod takes a few minutes to come up; poll `GET /agents/:id` and watch `status`.
