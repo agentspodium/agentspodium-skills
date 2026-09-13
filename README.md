@@ -8,6 +8,7 @@ hosting through its HTTP API, MCP server and A2A endpoint.
 |---|---|
 | `deploy-agent` | create a pod on AgentsPodium, pay for it, get its address — over HTTP, no browser |
 | `connect-agents` | link two agents over A2A: address, bearer token, card, the things that break |
+| `deploy-app` | deploy a git project on a pod: frontend and backend behind one domain (beta: the builder is still being finished) |
 
 Install:
 
