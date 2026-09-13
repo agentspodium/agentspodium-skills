@@ -132,7 +132,37 @@ whether DNS points here and whether HTTPS already answers. The certificate is
 issued automatically once the record resolves. Names under `agentspodium.com`
 are refused: every pod already gets one.
 
-## 6. Change something and rebuild
+## 6. Ship a new version of an app that already exists
+
+This is the common case: the project is already deployed, you pushed a commit,
+now make the pod serve it. Two things are needed and nothing else — the API
+key, and the id of the instance.
+
+If you do not have the id, list what the key can see:
+
+```bash
+curl -s https://agentspodium.com/api/agents -H "Authorization: Bearer $TOKEN"
+# {"agents":[{"id":"agt_…","name":"hq-app","engine":"app","status":"running",
+#             "endpointUrl":"https://…","app":{"repo":"…","branch":"main",…}}]}
+```
+
+Match on `engine: "app"` and the `app.repo` you just pushed to. Then:
+
+```bash
+curl -s -X POST https://agentspodium.com/api/agents/$ID/rebuild -H "Authorization: Bearer $TOKEN"
+curl -s https://agentspodium.com/api/agents/$ID/build -H "Authorization: Bearer $TOKEN"
+```
+
+`rebuild` fetches the latest commit on the configured branch, runs the build
+again and reloads the pod's routing. The disk is kept, so `node_modules` and
+framework caches survive and the second build is much faster than the first.
+Poll `/build` until `state` is `ok` or `failed`; on `failed`, `logTail` says
+why, and the site keeps serving the previous version in the meantime.
+
+Nothing else is required. The token, the branch and the build command are
+already stored on the instance.
+
+## 7. Change the configuration, then rebuild
 
 ```bash
 # point at another branch, fix the build command, replace the token
@@ -147,7 +177,7 @@ curl -s -X POST https://agentspodium.com/api/agents/$ID/rebuild -H "Authorizatio
 The PATCH answers `"applied":"on the next rebuild"` because the pod reads the
 configuration when it starts. Nothing changes until you rebuild.
 
-## 7. Private repositories
+## 8. Private repositories
 
 Send `repoToken` with a token that can read the repository. It is encrypted
 at rest, handed to the pod at deploy time, and never returned.
@@ -163,14 +193,14 @@ Know what you are agreeing to: the token lives in the pod's environment, and
 the code you deploy runs in that pod. It is your own repository token, but
 anything you deploy can read it. Use a token scoped to that one repository.
 
-## 8. Instead of polling
+## 9. Instead of polling
 
 Send `webhookUrl` on create and the platform POSTs signed events instead:
 `agent.running`, `agent.stopped`, `agent.failed`, `agent.deleted`,
 `payment.confirmed`, `deletion.warning`. The signing secret comes back once
 as `webhookSecret`. See https://hosting.defispace.com/docs/webhooks.md
 
-## 9. What goes wrong
+## 10. What goes wrong
 
 - **`Engine "app" needs app.repo`** — `engine: "app"` without the `app`
   object. The two travel together.
@@ -191,7 +221,7 @@ as `webhookSecret`. See https://hosting.defispace.com/docs/webhooks.md
 - **Pod answers, site is blank** — `outputDir` points at a directory the
   build did not produce. Check the build log for where the output went.
 
-## 10. Everything else
+## 11. Everything else
 
 An app instance is an instance like any other: `GET /agents/:id` for status,
 `/liveness`, `/usage`, `/term` for when it expires, pause, resume, delete,
