@@ -1,11 +1,10 @@
 ---
 name: deploy-app
 description: "Deploy a project from a git repository onto AgentsPodium: frontend and backend on one pod, behind one domain, with a persistent disk. Use when you are asked to ship an app somewhere, or to move a site off Netlify or Vercel without splitting the backend into functions."
-version: 0.1.0
+version: 1.0.0
 license: MIT
 metadata:
   tags: [deployment, hosting, git, frontend, backend, static-site, ci]
-  draft: true
 ---
 
 # Deploying an app on AgentsPodium
@@ -15,11 +14,11 @@ static files, the backend runs as an ordinary process next to it, and one
 proxy inside the pod puts them behind a single domain with TLS. The disk
 survives rebuilds. There is no split into functions and no per-service bill.
 
-**Status, 2026-09-13.** The account side described here is implemented and
-tested. The pod image that performs the build is still being finished, so a
-create call reaches the API and then waits on the builder. Check
-`GET /agents/:id/build` before believing a deployment succeeded, and treat a
-`state` of `unknown` as "not ready yet", not as "fine".
+**Status, 2026-09-13.** Verified on live pods: a private GitLab repository and
+a public GitHub monorepo, both Expo web builds inside a `small` pod, served
+over HTTPS on their own hostname. `node` and static output are the tested
+paths; `python`, `go` and `docker` runtimes are written but not yet proven, so
+check `GET /agents/:id/build` rather than assuming.
 
 Base URL for everything below:
 
@@ -151,10 +150,14 @@ configuration when it starts. Nothing changes until you rebuild.
 ## 7. Private repositories
 
 Send `repoToken` with a token that can read the repository. It is encrypted
-at rest, handed to the pod at deploy time, and never returned. `repoUser` is
-filled in for you per host: `x-access-token` for GitHub, `oauth2` for GitLab,
-the token alone for Gitea and Forgejo. Send `repoUser` yourself only when
-that guess is wrong.
+at rest, handed to the pod at deploy time, and never returned.
+
+`repoUser` you can leave out. Forges disagree about what goes next to a token
+— GitHub takes `x-access-token`, GitLab `oauth2`, Bitbucket `x-token-auth`,
+Gitea and Forgejo the token alone — and a self-hosted GitLab is
+indistinguishable from a self-hosted Gitea by its URL. The pod tries the forms
+in turn and keeps the one the server accepts; the build log names it. Send
+`repoUser` only to skip that.
 
 Know what you are agreeing to: the token lives in the pod's environment, and
 the code you deploy runs in that pod. It is your own repository token, but
@@ -181,6 +184,10 @@ as `webhookSecret`. See https://hosting.defispace.com/docs/webhooks.md
   accepted. Use the https URL and a token for private repositories.
 - **Build `failed` with an empty `logTail`** — the build produced no output
   before dying, usually out of memory. Move to a bigger plan and rebuild.
+- **`Could not fetch the repository`** — for a private one, the token cannot
+  read it, or it has expired. The log shows the attempt with the token
+  replaced by `***`; git prints the URL it tried on an auth failure, so it is
+  masked on the way out rather than trusted not to appear.
 - **Pod answers, site is blank** — `outputDir` points at a directory the
   build did not produce. Check the build log for where the output went.
 
